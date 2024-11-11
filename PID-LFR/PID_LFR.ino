@@ -1,5 +1,11 @@
 #include <QTRSensors.h>
+#include <Thread.h>
+#include <ThreadController.h>
+
 QTRSensors qtr;
+ThreadController controller = ThreadController();
+Thread sensorThread = Thread();
+Thread motorThread = Thread();
 
 const uint8_t SensorCount = 8;
 uint16_t sensorValues[SensorCount];
@@ -45,10 +51,22 @@ void setup()
         qtr.calibrate();delay(20);
     }
     delay(3000); 
+
+    sensorThread.onRun(sensorReading);
+    sensorThread.setInterval(50);
+    motorThread.onRun(motorControl);
+    motorThread.setInterval(50);
+    controller.add(&sensorThread);
+    controller.add(&motorThread);
 }  
 
 void loop()
 {   
+    controller.run();
+}
+
+void sensorReading()
+{
     uint16_t position = qtr.readLineBlack(sensorValues);
     if(position>6700)
     {   move(1, speedturn, 1);move(0, speedturn, 0);return;    
@@ -70,6 +88,11 @@ void loop()
     
     move(1, rightMotorSpeed, 1);
     move(0, leftMotorSpeed, 1);
+}
+
+void motorControl()
+{
+    // Motor control code moved to sensorReading function
 }
 
 void move(int motor, int speed, int direction)
